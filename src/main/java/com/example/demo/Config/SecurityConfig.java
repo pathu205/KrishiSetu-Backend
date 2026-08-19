@@ -21,9 +21,11 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/users/**").permitAll()
-                        .requestMatchers("/products/**").permitAll()
-                        .requestMatchers("/products/seller/**").permitAll()
+                        .requestMatchers(
+                                "/users/**",
+                                "/products/**",
+                                "/orders/**"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 );
 
