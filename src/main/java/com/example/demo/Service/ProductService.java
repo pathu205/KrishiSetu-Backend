@@ -1,5 +1,6 @@
 package com.example.demo.Service;
 
+import com.example.demo.exception.ForbiddenException;
 import com.example.demo.entity.Product;
 import com.example.demo.Repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -45,13 +46,18 @@ public class ProductService {
         return productRepository.findByCategory(category);
     }
 
+    // Search Products by Name
+    public List<Product> searchProductsByName(String name) {
+        return productRepository.findByNameContainingIgnoreCase(name);
+    }
+
     // Get Active Products
     public List<Product> getActiveProducts() {
         return productRepository.findByActiveTrue();
     }
 
     // Update Product
-    public Product updateProduct(String id, Product product) {
+    public Product updateProduct(String id, Product product, String userId) {
 
         Optional<Product> existingProduct = productRepository.findById(id);
 
@@ -60,6 +66,10 @@ public class ProductService {
         }
 
         Product oldProduct = existingProduct.get();
+
+        if (!oldProduct.getSellerId().equals(userId)){
+            throw new ForbiddenException("You are not allowed to update this product");
+        }
 
         if (product.getName() != null) {
             oldProduct.setName(product.getName());
@@ -77,7 +87,7 @@ public class ProductService {
             oldProduct.setPrice(product.getPrice());
         }
 
-        if (product.getQuantity() > 0) {
+        if (product.getQuantity() >= 0) {
             oldProduct.setQuantity(product.getQuantity());
         }
 
@@ -91,10 +101,19 @@ public class ProductService {
     }
 
     // Delete Product
-    public void deleteProduct(String id) {
+    public void deleteProduct(String id,String userId) {
 
-        if (!productRepository.existsById(id)) {
+        Optional<Product> existingProduct = productRepository.findById(id);
+
+        if (existingProduct.isEmpty()){
             throw new RuntimeException("Product not found");
+        }
+        Product product = existingProduct.get();
+
+        if (!product.getSellerId().equals(userId)){
+            throw new ForbiddenException(
+                    "You are not allowed to delete this product"
+            );
         }
 
         productRepository.deleteById(id);

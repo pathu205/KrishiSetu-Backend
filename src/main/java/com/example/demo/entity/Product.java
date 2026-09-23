@@ -27,8 +27,8 @@ public class Product {
     @Positive
     private double quantity;
     @NotBlank
-    private String unit;              // KG, QUINTAL, TONNE
-    @NotBlank
+    private String unit;              // KG, QUINTAL, TONNE,PACKS
+
     private String sellerId;          // User/FPO/SHG/Processor ID
 
     private boolean active;

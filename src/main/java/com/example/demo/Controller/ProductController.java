@@ -6,6 +6,8 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.example.demo.entity.User;
+import org.springframework.security.core.Authentication;
 
 import java.util.List;
 
@@ -18,7 +20,9 @@ public class ProductController {
 
     //Create product
     @PostMapping
-    public ResponseEntity<Product> createProduct(@Valid @RequestBody Product product){
+    public ResponseEntity<Product> createProduct(@Valid @RequestBody Product product, Authentication authentication){
+        User user = (User) authentication.getPrincipal();
+        product.setSellerId(user.getId());
         Product savedProduct = productService.createProduct(product);
         return ResponseEntity.ok(savedProduct);
     }
@@ -56,6 +60,16 @@ public class ProductController {
         );
     }
 
+    //Get Product By Name
+    @GetMapping("/search")
+    public ResponseEntity<List<Product>> searchProducts(
+            @RequestParam String name) {
+
+        return ResponseEntity.ok(
+                productService.searchProductsByName(name)
+        );
+    }
+
     // Get Active Products
     @GetMapping("/active")
     public ResponseEntity<List<Product>> getActiveProducts() {
@@ -69,10 +83,12 @@ public class ProductController {
     @PutMapping("/{id}")
     public ResponseEntity<Product> updateProduct(
             @PathVariable String id,
-            @RequestBody Product product) {
+            @RequestBody Product product,
+            Authentication authentication) {
 
+        User user = (User) authentication.getPrincipal();
         Product updatedProduct =
-                productService.updateProduct(id, product);
+                productService.updateProduct(id, product,user.getId());
 
         return ResponseEntity.ok(updatedProduct);
     }
@@ -80,9 +96,10 @@ public class ProductController {
     // Delete Product
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProduct(
-            @PathVariable String id) {
-
-        productService.deleteProduct(id);
+            @PathVariable String id,
+            Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        productService.deleteProduct(id, user.getId());
 
         return ResponseEntity.noContent().build();
     }

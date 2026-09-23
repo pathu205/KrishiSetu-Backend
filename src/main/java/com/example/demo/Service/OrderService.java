@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,7 +23,9 @@ public class OrderService {
     private ProductRepository productRepository;
 
     // Create Order
-    public Order createOrder(Order order) {
+    public Order createOrder(Order order, String buyerId) {
+        // Set buyer from logged-in user
+        order.setBuyerId(buyerId);
 
         // Find product
         Optional<Product> product = productRepository.findById(order.getProductId());
@@ -83,7 +86,27 @@ public class OrderService {
         return orderRepository.findByStatus(status);
     }
 
+    // Get Orders by Seller
+    public List<Order> getOrdersBySeller(String sellerId) {
 
+        List<Product> sellerProducts =
+                productRepository.findBySellerId(sellerId);
+
+        List<Order> sellerOrders = new ArrayList<>();
+
+        for (Product product : sellerProducts) {
+
+            List<Order> orders =
+                    orderRepository.findByProductId(product.getId());
+
+            sellerOrders.addAll(orders);
+        }
+
+        return sellerOrders;
+    }
+
+
+    // Update Order Status
     // Update Order Status
     public Order updateOrderStatus(String id, OrderStatus status) {
 
@@ -95,9 +118,43 @@ public class OrderService {
 
         Order order = existingOrder.get();
 
+        OrderStatus currentStatus = order.getStatus();
+
+        // Check whether the status transition is allowed
+        boolean validTransition = false;
+
+        if (currentStatus == OrderStatus.PENDING &&
+                (status == OrderStatus.CONFIRMED ||
+                        status == OrderStatus.CANCELLED)) {
+
+            validTransition = true;
+
+        } else if (currentStatus == OrderStatus.CONFIRMED &&
+                (status == OrderStatus.PROCESSING ||
+                        status == OrderStatus.CANCELLED)) {
+
+            validTransition = true;
+
+        } else if (currentStatus == OrderStatus.PROCESSING &&
+                status == OrderStatus.SHIPPED) {
+
+            validTransition = true;
+
+        } else if (currentStatus == OrderStatus.SHIPPED &&
+                status == OrderStatus.DELIVERED) {
+
+            validTransition = true;
+        }
+
+        if (!validTransition) {
+            throw new RuntimeException(
+                    "Invalid order status transition from "
+                            + currentStatus + " to " + status
+            );
+        }
+
         // CONFIRM ORDER → reduce stock
-        if (status == OrderStatus.CONFIRMED &&
-                order.getStatus() != OrderStatus.CONFIRMED) {
+        if (status == OrderStatus.CONFIRMED) {
 
             Optional<Product> existingProduct =
                     productRepository.findById(order.getProductId());
@@ -123,7 +180,7 @@ public class OrderService {
 
         // CANCEL ORDER → restore stock
         if (status == OrderStatus.CANCELLED &&
-                order.getStatus() == OrderStatus.CONFIRMED) {
+                currentStatus == OrderStatus.CONFIRMED) {
 
             Optional<Product> existingProduct =
                     productRepository.findById(order.getProductId());

@@ -1,6 +1,7 @@
 package com.example.demo.Service;
 
 import com.example.demo.Repository.UserRepository;
+import com.example.demo.entity.Role;
 import com.example.demo.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,14 +22,25 @@ public class UserService {
 
     //Creating the User
     public User createUser(User user){
+
         if(userRepository.existsByEmail(user.getEmail())){
             throw new RuntimeException("Email already Exist");
         }
+
+        if(user.getRole() == null) {
+            throw new RuntimeException("Role is required");
+        }
+
+        if(user.getRole() == Role.ADMIN) {
+            throw new RuntimeException("Admin registration is not allowed");
+        }
+
         user.setPassword(passwordEncoder.encode(user.getPassword()));
 
         user.setActive(true);
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());
+
         return userRepository.save(user);
     }
 
